@@ -34,7 +34,18 @@ namespace CapacityTracker
 
                 try
                 {
-                    line = $"{DateTime.Now}{ConfigurationManager.AppSettings.Get("Delimiter")}{GetCurrentLoad()}";
+                    var document = GetHtmlDocument();
+                    var load = GetCurrentLoad(document);
+                    var waitingPeople = GetWaitingPeople(document);
+
+                    var columns = new string[]
+                    {
+                        DateTime.Now.ToString(),
+                        load.ToString(),
+                        waitingPeople.ToString()
+                    };
+
+                    line = string.Join(ConfigurationManager.AppSettings.Get("Delimiter"), columns);
                     File.AppendAllLines(ConfigurationManager.AppSettings.Get("OutputFile"), new[] { line });
                 }
                 catch (Exception ex)
@@ -56,12 +67,8 @@ namespace CapacityTracker
             timer.Start();
         }
 
-        private static int GetCurrentLoad()
+        private static int GetCurrentLoad(HtmlDocument htmlDocument)
         {
-            var htmlWeb = new HtmlWeb();
-
-            var htmlDocument = htmlWeb.Load(ConfigurationManager.AppSettings.Get("Url"));
-
             var loadNode = htmlDocument.DocumentNode.SelectNodes("/html/body/div[1]/div[1]/header/div[2]/a/div[2]/div[3]/div");
             var load = loadNode.Single().InnerText;
 
@@ -70,6 +77,24 @@ namespace CapacityTracker
             var foo = regex.Match(load);
 
             return int.Parse(foo.Value);
+        }
+
+        private static int GetWaitingPeople(HtmlDocument htmlDocument)
+        {
+            var loadNode = htmlDocument.DocumentNode.SelectNodes("/html/body/div[1]/div[1]/header/div[2]/a/div[2]/div[2]/span");
+            var load = loadNode.Single().InnerText;
+
+            Regex regex = new Regex("[0-9]+(?=&nbsp;BOULDERER WARTEN)");
+
+            var foo = regex.Match(load);
+
+            return int.Parse(foo.Value);
+        }
+
+        private static HtmlDocument GetHtmlDocument()
+        {
+            var htmlWeb = new HtmlWeb();
+            return htmlWeb.Load(ConfigurationManager.AppSettings.Get("Url"));
         }
     }
 }
