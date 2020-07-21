@@ -1,6 +1,6 @@
-﻿using CapacityTracker.Properties;
-using HtmlAgilityPack;
+﻿using HtmlAgilityPack;
 using System;
+using System.Configuration;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -11,6 +11,8 @@ namespace CapacityTracker
 {
     internal class Program
     {
+        // How many boulderers are waiting?
+
         private static void Main(string[] args)
         {
             CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("DE-de");
@@ -24,20 +26,21 @@ namespace CapacityTracker
                 exitEvent.Set();
             };
 
-            Schedule(TimeSpan.FromSeconds(int.Parse(Resources.FetchIntervalInSeconds)), () =>
+            var fetchInterval = TimeSpan.FromSeconds(int.Parse(ConfigurationManager.AppSettings.Get("FetchIntervalInSeconds")));
+
+            Schedule(fetchInterval, () =>
             {
                 string line;
 
                 try
                 {
-                    line = $"{DateTime.Now}, {GetCurrentLoad()}";
+                    line = $"{DateTime.Now}{ConfigurationManager.AppSettings.Get("Delimiter")}{GetCurrentLoad()}";
+                    File.AppendAllLines(ConfigurationManager.AppSettings.Get("OutputFile"), new[] { line });
                 }
                 catch (Exception ex)
                 {
-                    line = $"{DateTime.Now} ERROR: Could not fetch load: {ex.Message}";
+                    Console.WriteLine($"{DateTime.Now} ERROR: Could not fetch load: {ex.Message}");
                 }
-
-                File.AppendAllLines(Resources.OutputFile, new[] { line });
             });
 
             exitEvent.WaitOne();
@@ -57,7 +60,7 @@ namespace CapacityTracker
         {
             var htmlWeb = new HtmlWeb();
 
-            var htmlDocument = htmlWeb.Load(Resources.Url);
+            var htmlDocument = htmlWeb.Load(ConfigurationManager.AppSettings.Get("Url"));
 
             var loadNode = htmlDocument.DocumentNode.SelectNodes("/html/body/div[1]/div[1]/header/div[2]/a/div[2]/div[3]/div");
             var load = loadNode.Single().InnerText;
