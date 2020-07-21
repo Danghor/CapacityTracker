@@ -86,9 +86,16 @@ namespace CapacityTracker
 
             Regex regex = new Regex("[0-9]+(?=&nbsp;BOULDERER WARTEN)");
 
-            var foo = regex.Match(load);
+            var match = regex.Match(load);
 
-            return int.Parse(foo.Value);
+            if(int.TryParse(match.Value, out int result))
+            {
+                return result;
+            }
+            else
+            {
+                return 0;
+            }
         }
 
         private static HtmlDocument GetHtmlDocument()
